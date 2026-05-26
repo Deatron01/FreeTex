@@ -1,7 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 @import "tailwindcss";
+
 /* Egy kis extra a szép görgetősávért */
 ::-webkit-scrollbar {
   width: 8px;
