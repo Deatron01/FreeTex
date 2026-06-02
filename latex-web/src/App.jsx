@@ -25,7 +25,7 @@ export default function App() {
   const [isBuilding, setIsBuilding] = useState(false);
   
   const fileInputRef = useRef(null);
-  const formRef = useRef(null); // Ez az új rejtett űrlapunk referenciája
+  const formRef = useRef(null);
 
   // Fájl letöltése memóriából
   const handleDownload = () => {
@@ -50,18 +50,19 @@ export default function App() {
     event.target.value = null; 
   };
 
-  // Build: A rejtett form elküldése az iframe-be
- const handleBuild = () => {
+  // Build folyamat elindítása
+  const handleBuild = () => {
     setIsBuilding(true);
     setHasCompiled(true);
     
-    // Egy kis késleltetés a renderelés előtt
+    if (formRef.current) {
+      formRef.current.submit();
+    }
+    
+    // Biztonsági timeout
     setTimeout(() => {
-      if (formRef.current) {
-        formRef.current.submit();
-      }
       setIsBuilding(false);
-    }, 500);
+    }, 5000);
   };
 
   return (
@@ -109,19 +110,31 @@ export default function App() {
           
           <div className="flex-1 flex items-center justify-center p-4">
             
-            {/* REJTETT ŰRLAP: Ez lövi fel a kódot az ingyenes TeX Live szerverre biztonságosan */}
-            <form ref={formRef} action="https://texlive.net/cgi-bin/latexcgi" method="POST" target="pdfFrame" className="hidden">
-              {/* A 'filename' mező kulcsfontosságú */}
-              <input type="hidden" name="filename" value="document.tex" />
-              <input type="hidden" name="engine" value="pdflatex" />
-              <textarea name="filecontents">{texCode}</textarea>
+            <form 
+                ref={formRef} 
+                action="https://texlive.net/cgi-bin/latexcgi" 
+                method="POST" 
+                encType="multipart/form-data" 
+                target="pdfFrame" 
+                className="hidden"
+              >
+              {/* JAVÍTVA: filename[] kell, hogy passzoljon a filecontents[] tömbhöz! */}
+              <input type="hidden" name="filename[]" value="document.tex" />
+              
+              <input type="hidden" name="return" value="pdf" />
+              
+              <textarea 
+                name="filecontents[]" 
+                value={texCode} 
+                readOnly 
+              />
             </form>
 
-            {/* A kapott PDF egyenesen ide fog érkezni */}
             <iframe 
               name="pdfFrame"
               className={`w-full h-full rounded-xl bg-white shadow-inner ${!hasCompiled ? 'hidden' : 'block'}`}
               title="PDF Preview"
+              onLoad={() => setIsBuilding(false)}
             />
             
             {!hasCompiled && (
