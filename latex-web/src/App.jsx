@@ -65,6 +65,15 @@ export default function App() {
     }, 5000);
   };
 
+  const [assets, setAssets] = useState([]); // Itt tároljuk a képek adatait
+  const handleAssetUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Kép hozzáadása a listához
+      setAssets(prev => [...prev, { name: file.name, url: URL.createObjectURL(file) }]);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-300 via-purple-300 to-pink-300 p-4 md:p-8 font-sans">
       
@@ -88,7 +97,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 h-[75vh]">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 h-[75vh]">
         
         <div className="flex flex-col bg-white/20 backdrop-blur-xl border border-white/40 shadow-xl rounded-2xl overflow-hidden">
           <div className="px-4 py-2 border-b border-white/30 bg-white/10">
@@ -101,6 +110,20 @@ export default function App() {
             className="flex-1 w-full p-4 bg-transparent text-gray-900 font-mono text-sm focus:outline-none resize-none"
             placeholder="Írd ide a LaTeX kódot..."
           />
+        </div>
+
+        <div className="bg-white/10 border border-white/20 rounded-2xl p-4 overflow-y-auto">
+          <h3 className="text-white font-bold mb-4">Képtár</h3>
+          <input type="file" onChange={handleAssetUpload} className="text-xs text-white mb-4" />
+          <div className="space-y-2">
+            {assets.map(asset => (
+              <div key={asset.name} className="bg-white/5 p-2 rounded text-xs text-white truncate">
+                {asset.name}
+                <button onClick={() => navigator.clipboard.writeText(`\\includegraphics{${asset.name}}`)} 
+                        className="ml-2 text-blue-300 hover:underline">Másolás</button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-col bg-white/20 backdrop-blur-xl border border-white/40 shadow-xl rounded-2xl overflow-hidden relative">
@@ -118,6 +141,12 @@ export default function App() {
                 target="pdfFrame" 
                 className="hidden"
               >
+              {assets.map((asset) => (
+                <React.Fragment key={asset.name}>
+                  <input type="hidden" name="filename[]" value={asset.name} />
+                  <textarea name="filecontents[]" value={asset.data} className="hidden" />
+                </React.Fragment>
+              ))}
               {/* JAVÍTVA: filename[] kell, hogy passzoljon a filecontents[] tömbhöz! */}
               <input type="hidden" name="filename[]" value="document.tex" />
               
