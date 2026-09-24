@@ -26,7 +26,13 @@ function ServerStatus({ url }) {
       {state.loading ? <Spinner className="mt-0.5" /> : state.info ? <CheckCircle2 size={18} className="mt-0.5 text-emerald-500" /> : <XCircle size={18} className="mt-0.5 text-slate-400" />}
       <div className="flex-1">
         {state.loading && t('Checking compile server…')}
-        {!state.loading && state.info && (
+        {!state.loading && state.info && !(state.info.tex ?? true) && (
+          <>
+            <div className="font-medium">{t('Compile server connected, but no TeX installation found')}</div>
+            <div className="text-xs text-slate-500">{t('Projects are compiled on texlive.net through the server. Install TeX Live or MiKTeX and restart for offline compiling, SyncTeX and binary files.')}</div>
+          </>
+        )}
+        {!state.loading && state.info && (state.info.tex ?? true) && (
           <>
             <div className="font-medium">{t('Local compile server connected')}</div>
             <div className="text-xs text-slate-500">

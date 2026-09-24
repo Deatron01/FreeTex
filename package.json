@@ -9,7 +9,9 @@
     "build": "npm --prefix latex-web run build",
     "lint": "npm --prefix latex-web run lint",
     "server": "node server/index.js",
-    "start": "npm run build && node server/index.js"
+    "start": "npm run build && node server/index.js",
+    "desktop": "npm run build && npm --prefix desktop install && npm --prefix desktop start",
+    "dist:desktop": "npm run build && npm --prefix desktop install && npm --prefix desktop run dist"
   },
   "engines": {
     "node": ">=18"

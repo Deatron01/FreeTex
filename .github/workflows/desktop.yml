@@ -1,0 +1,111 @@
+name: Desktop app
+
+# Builds the FreeTex desktop app (Windows .exe, macOS .dmg, Linux .AppImage).
+# Pushing a tag like v1.0.0 also publishes a GitHub Release with the downloads.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            latex-web/package-lock.json
+            desktop/package-lock.json
+
+      - name: Build web app
+        working-directory: latex-web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Use tag as app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: desktop
+        shell: bash
+        run: npm version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
+
+      - name: Package desktop app
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          npm ci
+          npm run dist -- --publish never
+
+      - name: Install TeX for the smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends texlive-latex-base latexmk
+
+      - name: Smoke test (Linux)
+        if: runner.os == 'Linux'
+        env:
+          FREETEX_SMOKE_OUT: ${{ runner.temp }}/smoke.json
+        run: xvfb-run -a desktop/dist/linux-unpacked/freetex --smoke-test --no-sandbox
+
+      - name: Smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          FREETEX_SMOKE_OUT: ${{ runner.temp }}\smoke.json
+        run: |
+          $p = Start-Process -FilePath "desktop\dist\win-unpacked\FreeTex.exe" -ArgumentList "--smoke-test" -Wait -PassThru
+          Get-Content $env:FREETEX_SMOKE_OUT
+          exit $p.ExitCode
+
+      - name: Smoke test (macOS)
+        if: runner.os == 'macOS'
+        env:
+          FREETEX_SMOKE_OUT: ${{ runner.temp }}/smoke.json
+        run: |
+          app=$(ls -d desktop/dist/mac*/FreeTex.app | head -1)
+          "$app/Contents/MacOS/FreeTex" --smoke-test
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FreeTex-${{ runner.os }}
+          if-no-files-found: error
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+            desktop/dist/*.AppImage
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          body: |
+            ## Download FreeTex
+
+            - **Windows:** `FreeTex-*-portable.exe` – just download and double-click (no installation). Or use `FreeTex-*-setup.exe` to install it with a Start menu entry.
+            - **macOS:** `.dmg` – the app is not signed, so right-click → Open the first time.
+            - **Linux:** `.AppImage` – make it executable (`chmod +x`) and run it.
+
+            FreeTex compiles with your own TeX Live / MiKTeX when installed, otherwise online through texlive.net (internet needed).

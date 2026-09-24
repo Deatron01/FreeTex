@@ -64,6 +64,8 @@ export default {
   'Compile backend': 'Fordító szolgáltatás',
   'Compile on save (Ctrl+S)': 'Fordítás mentéskor (Ctrl+S)',
   'Compile options': 'Fordítási beállítások',
+  'Compile server connected, but no TeX installation found': 'A fordítószerver csatlakozik, de nem talál TeX telepítést',
+  'Projects are compiled on texlive.net through the server. Install TeX Live or MiKTeX and restart for offline compiling, SyncTeX and binary files.': 'A projektek a szerveren keresztül a texlive.net-en fordulnak. Telepíts TeX Live-ot vagy MiKTeX-et, majd indítsd újra az offline fordításhoz, a SyncTeX-hez és a bináris fájlokhoz.',
   'Compile server URL': 'Fordítószerver címe',
   'Compile the project first.': 'Előbb fordítsd le a projektet.',
   'Compile the project to see logs.': 'Fordítsd le a projektet a napló megtekintéséhez.',

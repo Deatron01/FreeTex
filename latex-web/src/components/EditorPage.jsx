@@ -256,8 +256,8 @@ export default function EditorPage({ projectId }) {
     let usedIframe = false;
     try {
       if (iframeMode && settings.compileBackend !== 'server') {
-        const { backend } = await resolveBackend(settings);
-        if (backend === 'texlivenet') {
+        const { backend, info } = await resolveBackend(settings);
+        if (backend === 'texlivenet' && !info?.texliveNetProxy) {
           usedIframe = true;
           await submitToIframe();
           return;

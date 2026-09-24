@@ -2,8 +2,12 @@
 // FreeTex compile server.
 //
 // A small, dependency-free HTTP server that compiles FreeTex projects with a
-// local TeX Live installation (latexmk) and answers SyncTeX queries. It can
-// also serve the built web app (latex-web/dist), so one command runs everything.
+// local TeX Live installation (latexmk) and answers SyncTeX queries. It also
+// proxies texlive.net (so machines without TeX can still compile, free of CORS
+// limits) and can serve the built web app (latex-web/dist).
+//
+// Run it directly (`node server/index.js`) or embed it with startServer(),
+// as the desktop app does.
 //
 // Environment variables:
 //   PORT                         port to listen on (default 3001)
@@ -23,13 +27,19 @@ import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.PORT || 3001);
-const HOST = process.env.HOST || '127.0.0.1';
-const WORKDIR = path.resolve(process.env.FREETEX_WORKDIR || path.join(os.tmpdir(), 'freetex-builds'));
-const TIMEOUT = Number(process.env.FREETEX_TIMEOUT || 240) * 1000;
-const ALLOW_SHELL_ESCAPE = process.env.FREETEX_ALLOW_SHELL_ESCAPE === '1';
-const CORS_ORIGIN = process.env.FREETEX_CORS_ORIGIN || '*';
-const STATIC_DIR = path.resolve(process.env.FREETEX_STATIC_DIR || path.join(__dirname, '..', 'latex-web', 'dist'));
+
+// Runtime configuration: environment defaults, overridable through startServer().
+const config = {
+  port: Number(process.env.PORT || 3001),
+  host: process.env.HOST || '127.0.0.1',
+  workdir: path.resolve(process.env.FREETEX_WORKDIR || path.join(os.tmpdir(), 'freetex-builds')),
+  timeout: Number(process.env.FREETEX_TIMEOUT || 240) * 1000,
+  allowShellEscape: process.env.FREETEX_ALLOW_SHELL_ESCAPE === '1',
+  corsOrigin: process.env.FREETEX_CORS_ORIGIN || '*',
+  staticDir: path.resolve(process.env.FREETEX_STATIC_DIR || path.join(__dirname, '..', 'latex-web', 'dist')),
+  texliveNetUrl: process.env.FREETEX_TEXLIVENET_URL || 'https://texlive.net/cgi-bin/latexcgi',
+  fetch: (...args) => fetch(...args),
+};
 const MAX_BODY = 200 * 1024 * 1024;
 const MANIFEST = '.freetex-manifest.json';
 const VERSION = '1.0.0';
@@ -41,10 +51,15 @@ function which(cmd) {
   return r.status === 0 ? r.stdout.split('\n')[0].trim() : null;
 }
 
-const TOOLS = Object.fromEntries(
-  ['latexmk', 'pdflatex', 'xelatex', 'lualatex', 'latex', 'platex', 'uplatex', 'context', 'pdftex', 'bibtex', 'biber', 'makeindex', 'makeglossaries', 'synctex', 'dvipdfmx']
-    .map((t) => [t, !!which(t)]),
-);
+const TOOL_NAMES = ['latexmk', 'perl', 'pdflatex', 'xelatex', 'lualatex', 'latex', 'platex', 'uplatex', 'context', 'pdftex', 'bibtex', 'biber', 'makeindex', 'makeglossaries', 'synctex', 'dvipdfmx'];
+let TOOLS = {};
+export function detectTools() {
+  TOOLS = Object.fromEntries(TOOL_NAMES.map((t) => [t, !!which(t)]));
+  // latexmk is a Perl script; MiKTeX installs it without Perl on Windows.
+  TOOLS.useLatexmk = TOOLS.latexmk && (process.platform !== 'win32' || TOOLS.perl);
+  TOOLS.tex = TOOLS.pdflatex || TOOLS.xelatex || TOOLS.lualatex || TOOLS.latexmk;
+  return TOOLS;
+}
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -53,7 +68,7 @@ function send(res, status, body, headers = {}) {
   const isBuffer = Buffer.isBuffer(body);
   const payload = isBuffer || typeof body === 'string' ? body : JSON.stringify(body);
   res.writeHead(status, {
-    'Access-Control-Allow-Origin': CORS_ORIGIN,
+    'Access-Control-Allow-Origin': config.corsOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Content-Type': isBuffer ? 'application/octet-stream' : typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json',
@@ -97,7 +112,7 @@ function resolveInside(dir, rel) {
 function projectDir(projectId) {
   const id = safeId(projectId);
   if (!id) throw new Error('Missing projectId');
-  return path.join(WORKDIR, id);
+  return path.join(config.workdir, id);
 }
 
 // Serialise compiles per project.
@@ -111,7 +126,7 @@ function withLock(key, fn) {
   return next;
 }
 
-function run(cmd, args, cwd, timeout = TIMEOUT) {
+function run(cmd, args, cwd, timeout = config.timeout) {
   return new Promise((resolve) => {
     let out = '';
     const child = spawn(cmd, args, {
@@ -239,7 +254,7 @@ async function compile(body) {
     engine: String(body.engine || 'pdflatex'),
     bibTool: String(body.bibTool || 'auto'),
     makeglossaries: !!body.makeglossaries,
-    shellEscape: ALLOW_SHELL_ESCAPE && !!body.shellEscape,
+    shellEscape: config.allowShellEscape && !!body.shellEscape,
     stopOnFirstError: !!body.stopOnFirstError,
   };
 
@@ -256,7 +271,7 @@ async function compile(body) {
         ? ['--nonstopmode', '--synctex', main]
         : ['-interaction=nonstopmode', '-file-line-error', '-synctex=1', main];
       result = await run(opts.engine, args, dir);
-    } else if (TOOLS.latexmk) {
+    } else if (TOOLS.useLatexmk) {
       result = await run('latexmk', latexmkArgs(opts), dir);
     } else {
       result = await manualCompile(dir, opts);
@@ -356,19 +371,19 @@ const MIME = {
 };
 
 async function serveStatic(req, res, pathname) {
-  if (!fs.existsSync(STATIC_DIR)) {
+  if (!fs.existsSync(config.staticDir)) {
     send(res, 404, 'FreeTex compile server is running. Build the web app (npm run build) to serve it from here, or use the Vite dev server.');
     return;
   }
   let file;
   try {
-    file = resolveInside(STATIC_DIR, decodeURIComponent(pathname).replace(/^\/+/, '') || 'index.html');
+    file = resolveInside(config.staticDir, decodeURIComponent(pathname).replace(/^\/+/, '') || 'index.html');
   } catch {
-    file = path.join(STATIC_DIR, 'index.html');
+    file = path.join(config.staticDir, 'index.html');
   }
   let stat = await fsp.stat(file).catch(() => null);
   if (!stat || stat.isDirectory()) {
-    file = path.join(STATIC_DIR, 'index.html');
+    file = path.join(config.staticDir, 'index.html');
     stat = await fsp.stat(file).catch(() => null);
   }
   if (!stat) {
@@ -383,9 +398,33 @@ async function serveStatic(req, res, pathname) {
 }
 
 // ---------------------------------------------------------------------------
+// texlive.net proxy: forwards the multipart form and follows the redirect to
+// the PDF or log. Server-side requests are not subject to browser CORS rules.
+
+async function proxyTexliveNet(req, res, url) {
+  const body = await readBody(req);
+  if (body.length > 2 * 1024 * 1024) return send(res, 413, 'Form data too large');
+  const target = url.searchParams.get('target');
+  const dest = target && /^https?:\/\//i.test(target) ? target : config.texliveNetUrl;
+  let upstream;
+  try {
+    upstream = await config.fetch(dest, {
+      method: 'POST',
+      headers: { 'Content-Type': req.headers['content-type'] || 'multipart/form-data' },
+      body,
+      redirect: 'follow',
+    });
+  } catch (e) {
+    return send(res, 502, `Could not reach ${new URL(dest).host}: ${e.message}`);
+  }
+  const data = Buffer.from(await upstream.arrayBuffer());
+  return send(res, upstream.status, data, { 'Content-Type': upstream.headers.get('content-type') || 'application/octet-stream' });
+}
+
+// ---------------------------------------------------------------------------
 // router
 
-const server = http.createServer(async (req, res) => {
+async function handle(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const { pathname } = url;
   try {
@@ -396,13 +435,18 @@ const server = http.createServer(async (req, res) => {
         freetex: true,
         version: VERSION,
         tools: TOOLS,
+        tex: !!TOOLS.tex,
         latexmk: TOOLS.latexmk,
         synctex: TOOLS.synctex,
-        shellEscapeAllowed: ALLOW_SHELL_ESCAPE,
+        shellEscapeAllowed: config.allowShellEscape,
+        texliveNetProxy: true,
       });
     }
     if (pathname === '/api/compile' && req.method === 'POST') {
       return send(res, 200, await compile(await readJson(req)));
+    }
+    if (pathname === '/api/texlivenet' && req.method === 'POST') {
+      return await proxyTexliveNet(req, res, url);
     }
     if (pathname === '/api/synctex/view' && req.method === 'POST') {
       return send(res, 200, await synctexView(await readJson(req)));
@@ -430,14 +474,35 @@ const server = http.createServer(async (req, res) => {
   } catch (e) {
     return send(res, 400, { error: e.message });
   }
-});
+}
 
-fs.mkdirSync(WORKDIR, { recursive: true });
-server.listen(PORT, HOST, () => {
-  const missing = !TOOLS.latexmk && !TOOLS.pdflatex;
-  console.log(`FreeTex server listening on http://${HOST}:${PORT}`);
-  console.log(`  build directory: ${WORKDIR}`);
-  console.log(`  latexmk: ${TOOLS.latexmk ? 'yes' : 'no'}, synctex: ${TOOLS.synctex ? 'yes' : 'no'}, shell escape: ${ALLOW_SHELL_ESCAPE ? 'allowed' : 'disabled'}`);
-  if (missing) console.warn('  WARNING: no TeX installation found on PATH. Install TeX Live or use the Docker image.');
-  if (fs.existsSync(STATIC_DIR)) console.log(`  serving web app from ${STATIC_DIR}`);
-});
+// Starts the server. Options override the environment defaults:
+// { port, host, workdir, staticDir, timeout, allowShellEscape, corsOrigin, texliveNetUrl, fetch }
+// Resolves to { server, url, tools } once listening.
+export function startServer(options = {}) {
+  for (const [k, v] of Object.entries(options)) if (v !== undefined) config[k] = v;
+  detectTools();
+  fs.mkdirSync(config.workdir, { recursive: true });
+  const server = http.createServer(handle);
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(config.port, config.host, () => {
+      const { port } = server.address();
+      resolve({ server, url: `http://${config.host}:${port}`, tools: TOOLS });
+    });
+  });
+}
+
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) {
+  startServer().then(({ url, tools }) => {
+    console.log(`FreeTex server listening on ${url}`);
+    console.log(`  build directory: ${config.workdir}`);
+    console.log(`  latexmk: ${tools.useLatexmk ? 'yes' : 'no'}, synctex: ${tools.synctex ? 'yes' : 'no'}, shell escape: ${config.allowShellEscape ? 'allowed' : 'disabled'}`);
+    if (!tools.tex) console.warn('  No TeX installation found on PATH: projects will be compiled through texlive.net.');
+    if (fs.existsSync(config.staticDir)) console.log(`  serving web app from ${config.staticDir}`);
+  }).catch((e) => {
+    console.error(`Could not start the FreeTex server: ${e.message}`);
+    process.exit(1);
+  });
+}

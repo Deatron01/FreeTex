@@ -2,6 +2,21 @@
 
 FreeTex is a free, open source LaTeX editor that runs in the browser, in the style of Overleaf. You write on the left and see the compiled PDF on the right. It works without installing anything: it uses the public [texlive.net](https://texlive.net) service. If you have TeX Live installed, you can run the bundled compile server instead, which makes compiles faster and adds SyncTeX and full file support.
 
+## Download (for friends: no setup needed)
+
+Go to the [**Releases**](https://github.com/Deatron01/FreeTex/releases/latest) page and download the file for your system:
+
+| System | File | How to start |
+|---|---|---|
+| Windows | `FreeTex-x.y.z-portable.exe` | Double-click it. Nothing to install. |
+| Windows (installer) | `FreeTex-x.y.z-setup.exe` | Installs FreeTex with Start menu and desktop shortcuts |
+| macOS | `FreeTex-x.y.z-mac-arm64.dmg` | Open it, drag FreeTex to Applications, then right-click → **Open** the first time (the app is not signed) |
+| Linux | `FreeTex-x.y.z-linux-x86_64.AppImage` | `chmod +x` the file, then run it |
+
+The desktop app has the whole editor and its own compile server built in. If [TeX Live](https://tug.org/texlive/) or [MiKTeX](https://miktex.org/) is installed, FreeTex uses it: compiling works offline and supports SyncTeX and every file type. Without TeX, projects are compiled online through texlive.net, so you need an internet connection. Projects are saved on your computer.
+
+> Windows SmartScreen may warn about an unknown publisher because the app is not code-signed. Click **More info → Run anyway**.
+
 ## Features
 
 **Projects**
@@ -69,6 +84,22 @@ npm start         # builds latex-web and serves everything on http://127.0.0.1:3
 
 When the server is running, FreeTex uses it automatically. You can change this in **Settings → Compiler**.
 
+### Desktop app
+
+```bash
+npm run desktop        # build the web app and start FreeTex in an Electron window
+npm run dist:desktop   # build installers for the current OS into desktop/dist/
+```
+
+The **Desktop app** GitHub Actions workflow builds and tests the Windows, macOS and Linux versions on every push. To publish a release your friends can download:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow then creates a GitHub Release with the `.exe`, `.dmg` and `.AppImage` attached.
+
 ### Docker
 
 ```bash
@@ -108,7 +139,7 @@ You can also point FreeTex at any other server that runs [latexcgi](https://gith
 | `FREETEX_CORS_ORIGIN` | `*` | `Access-Control-Allow-Origin` header |
 | `FREETEX_STATIC_DIR` | `latex-web/dist` | Built web app to serve |
 
-API: `GET /api/health`, `POST /api/compile`, `POST /api/synctex/view`, `POST /api/synctex/edit`, `GET /api/output/:project/:file`, `DELETE /api/cache/:project`.
+API: `GET /api/health`, `POST /api/compile`, `POST /api/texlivenet` (relay to texlive.net; used automatically when no TeX is installed), `POST /api/synctex/view`, `POST /api/synctex/edit`, `GET /api/output/:project/:file`, `DELETE /api/cache/:project`.
 
 > **Security:** the server compiles whatever LaTeX it receives. It listens only on localhost by default and keeps shell escape off. If you expose it to other people, put it behind authentication and run it in a container (for example the Docker image, which runs as `nobody`).
 
@@ -120,6 +151,7 @@ latex-web/            React + Vite + Tailwind front end
   src/lib/            storage (IndexedDB), compile backends, log parser, LaTeX language support,
                       project index (labels, citations, outline, word count), image→PDF converter, i18n
 server/index.js       compile server (latexmk + SyncTeX), also serves the built app
+desktop/              Electron wrapper (main.cjs) that embeds the server; packaged with electron-builder
 Dockerfile            web app + server + TeX Live in one image
 ```
 
