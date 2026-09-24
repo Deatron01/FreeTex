@@ -1,0 +1,67 @@
+{
+  "name": "freetex-desktop",
+  "productName": "FreeTex",
+  "version": "1.0.0",
+  "description": "FreeTex – free LaTeX editor with live PDF preview",
+  "author": "FreeTex contributors",
+  "homepage": "https://github.com/Deatron01/FreeTex",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "stage": "node scripts/stage.mjs",
+    "start": "npm run stage && electron .",
+    "dist": "npm run stage && electron-builder",
+    "dist:win": "npm run stage && electron-builder --win",
+    "dist:mac": "npm run stage && electron-builder --mac",
+    "dist:linux": "npm run stage && electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "io.github.deatron01.freetex",
+    "productName": "FreeTex",
+    "asar": false,
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.cjs",
+      "package.json",
+      "app/**/*",
+      "build/icon.png"
+    ],
+    "publish": null,
+    "win": {
+      "target": [
+        { "target": "portable", "arch": ["x64"] },
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.png"
+    },
+    "portable": {
+      "artifactName": "FreeTex-${version}-portable.exe"
+    },
+    "nsis": {
+      "artifactName": "FreeTex-${version}-setup.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "artifactName": "FreeTex-${version}-mac-${arch}.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Office",
+      "executableName": "freetex",
+      "icon": "build/icon.png",
+      "artifactName": "FreeTex-${version}-linux-${arch}.${ext}"
+    }
+  }
+}

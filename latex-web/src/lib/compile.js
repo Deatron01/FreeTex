@@ -377,15 +377,22 @@ export async function submitTexliveNetForm(project, compiler, iframeName, onWarn
 
 // ---------------------------------------------------------------------------
 
+// Picks the backend. A running FreeTex server with TeX compiles locally; a
+// server without TeX (e.g. the desktop app on a machine without TeX Live)
+// relays to texlive.net, which avoids the browser's CORS restrictions.
 export async function resolveBackend(settings) {
   const base = (settings.serverUrl || '').replace(/\/$/, '');
-  if (settings.compileBackend === 'texlivenet') return { backend: 'texlivenet', base };
+  const target = settings.texliveNetUrl || TEXLIVE_NET_URL;
   const info = await checkServer(base);
-  if (info) return { backend: 'server', base, info };
+  const texliveNetUrl = info?.texliveNetProxy ? `${base}/api/texlivenet?target=${encodeURIComponent(target)}` : target;
+  if (settings.compileBackend === 'texlivenet') return { backend: 'texlivenet', base, info, texliveNetUrl };
+  if (info && (info.tex ?? true)) return { backend: 'server', base, info, texliveNetUrl };
   if (settings.compileBackend === 'server') {
-    throw new CompileError(`The compile server at ${base || window.location.origin} is not reachable. Start it with "npm run server" or switch the compiler backend in Settings.`);
+    throw new CompileError(info
+      ? 'The compile server has no TeX installation. Install TeX Live (or MiKTeX) and restart, or switch the compile backend to Automatic.'
+      : `The compile server at ${base || window.location.origin} is not reachable. Start it with "npm run server" or switch the compiler backend in Settings.`);
   }
-  return { backend: 'texlivenet', base };
+  return { backend: 'texlivenet', base, info, texliveNetUrl };
 }
 
 export async function compileProject(project, settings, { signal, onWarning = () => {} } = {}) {
@@ -393,11 +400,11 @@ export async function compileProject(project, settings, { signal, onWarning = ()
     throw new CompileError('No main document is set. Right-click a .tex file and choose "Set as main document".');
   }
   const compiler = effectiveCompiler(project);
-  const { backend, base } = await resolveBackend(settings);
+  const { backend, base, texliveNetUrl } = await resolveBackend(settings);
   const started = performance.now();
   const result = backend === 'server'
     ? await compileOnServer(project, compiler, { baseUrl: base, signal, stopOnFirstError: settings.stopOnFirstError, draft: settings.draftMode })
-    : await compileTexliveNet(project, compiler, { signal, onWarning, url: settings.texliveNetUrl || TEXLIVE_NET_URL });
+    : await compileTexliveNet(project, compiler, { signal, onWarning, url: texliveNetUrl });
   result.duration = result.duration || Math.round(performance.now() - started);
   result.compiler = compiler;
   result.baseUrl = base;
