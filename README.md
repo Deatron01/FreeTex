@@ -98,7 +98,7 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-The workflow then creates a GitHub Release with the `.exe`, `.dmg` and `.AppImage` attached.
+The workflow then creates a GitHub Release with the `.exe`, `.dmg` and `.AppImage` attached. Alternatively, open **Actions → Desktop app → Run workflow** on GitHub and enter a version such as `1.0.1`; the workflow creates the tag and the release for you.
 
 ### Docker
 
