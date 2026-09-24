@@ -1,0 +1,14 @@
+{
+  "name": "freetex-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FreeTex compile server: compiles LaTeX projects with a local TeX Live and answers SyncTeX queries.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

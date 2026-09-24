@@ -1,0 +1,17 @@
+{
+  "name": "freetex",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FreeTex – a free, open source, Overleaf-style online LaTeX editor.",
+  "scripts": {
+    "setup": "npm --prefix latex-web install",
+    "dev": "npm --prefix latex-web run dev",
+    "build": "npm --prefix latex-web run build",
+    "lint": "npm --prefix latex-web run lint",
+    "server": "node server/index.js",
+    "start": "npm run build && node server/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
