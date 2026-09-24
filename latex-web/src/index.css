@@ -1,16 +1,159 @@
 @import "tailwindcss";
 
-/* Egy kis extra a szép görgetősávért */
-::-webkit-scrollbar {
-  width: 8px;
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
 }
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1); 
+
+html, body, #root {
+  height: 100%;
 }
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3); 
-  border-radius: 4px;
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5); 
+.dark body {
+  background: #0b1120;
+  color: #e2e8f0;
 }
+
+@utility btn-base {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-colors
+    disabled:opacity-50 disabled:pointer-events-none select-none whitespace-nowrap;
+}
+
+@layer components {
+  .btn {
+    @apply btn-base px-2.5 py-1.5 text-slate-700 hover:bg-slate-200/70 dark:text-slate-200 dark:hover:bg-slate-700/60;
+  }
+  .btn-icon {
+    @apply btn-base p-1.5 text-slate-600 hover:bg-slate-200/70 dark:text-slate-300 dark:hover:bg-slate-700/60;
+  }
+  .btn-outline {
+    @apply btn-base px-2.5 py-1.5 border border-slate-300 bg-white text-slate-700 hover:bg-slate-50
+      dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700;
+  }
+  .btn-primary {
+    @apply btn-base px-2.5 py-1.5 bg-brand-600 text-white hover:bg-brand-700;
+  }
+  .btn-danger {
+    @apply btn-base px-2.5 py-1.5 bg-red-600 text-white hover:bg-red-700;
+  }
+  .btn-active {
+    @apply bg-slate-200 dark:bg-slate-700;
+  }
+  .input {
+    @apply w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none
+      focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30
+      dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100;
+  }
+  .label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400;
+  }
+  .panel-header {
+    @apply flex h-9 shrink-0 items-center gap-1 border-b border-slate-200 bg-slate-50 px-2 text-xs font-semibold uppercase tracking-wide text-slate-500
+      dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400;
+  }
+  .menu {
+    @apply z-50 min-w-48 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-sm shadow-xl dark:border-slate-700 dark:bg-slate-800;
+  }
+  .menu-item {
+    @apply flex w-full items-center gap-2 px-3 py-1.5 text-left text-slate-700 hover:bg-slate-100 disabled:opacity-40 dark:text-slate-200 dark:hover:bg-slate-700;
+  }
+  .menu-sep {
+    @apply my-1 border-t border-slate-200 dark:border-slate-700;
+  }
+  .kbd {
+    @apply rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300;
+  }
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.35); border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: rgba(100, 116, 139, 0.6); }
+
+/* CodeMirror */
+.cm-editor { height: 100%; }
+.cm-editor.cm-focused { outline: none; }
+.cm-scroller { font-family: var(--editor-font, var(--font-mono)); }
+.cm-tooltip-autocomplete .cm-completionLabel { font-family: var(--font-mono); }
+.cm-panels { font-family: var(--font-sans); }
+.cm-flash-line { animation: cm-flash 1.6s ease-out; }
+@keyframes cm-flash {
+  0% { background-color: rgba(250, 204, 21, 0.55); }
+  100% { background-color: transparent; }
+}
+
+/* PDF viewer */
+.pdf-page {
+  position: relative;
+  margin: 0 auto 12px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.pdf-page canvas { display: block; }
+.pdf-dark .pdf-page canvas { filter: invert(0.92) hue-rotate(180deg); }
+.pdf-page .textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  z-index: 2;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.pdf-page .textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+.pdf-page .textLayer > :not(.markedContent),
+.pdf-page .textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.pdf-page .textLayer .markedContent { display: contents; }
+.pdf-page .textLayer ::selection { background: rgba(37, 99, 235, 0.3); }
+.pdf-page .textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: -1; cursor: default; user-select: none; }
+.pdf-page .linkLayer { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.pdf-page .linkLayer a { position: absolute; pointer-events: auto; }
+.pdf-page .linkLayer a:hover { background: rgba(37, 99, 235, 0.12); }
+.pdf-highlight {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  background: rgba(250, 204, 21, 0.45);
+  border-radius: 2px;
+  animation: pdf-flash 2.2s ease-out forwards;
+}
+@keyframes pdf-flash {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Log / diff */
+.diff-add { background: rgba(16, 185, 129, 0.15); }
+.diff-del { background: rgba(239, 68, 68, 0.15); }
