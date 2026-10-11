@@ -1,8 +1,17 @@
-# FreeTex
+<p align="center">
+  <img src="./.github/assets/banner.svg" alt="FreeTex — Why pay to compile LaTeX?" width="100%" />
+</p>
+
+<p align="center">
+  <samp>JAVASCRIPT · CODEMIRROR 6 · ELECTRON</samp><br />
+  <samp><a href="https://github.com/Deatron01/FreeTex/releases/latest">DOWNLOAD ↗</a></samp>
+</p>
+
+### <samp>01 — WHAT IT IS</samp>
 
 FreeTex is a free, open source LaTeX editor that runs in the browser, in the style of Overleaf. You write on the left and see the compiled PDF on the right. It works without installing anything: it uses the public [texlive.net](https://texlive.net) service. If you have TeX Live installed, you can run the bundled compile server instead, which makes compiles faster and adds SyncTeX and full file support.
 
-## Download (for friends: no setup needed)
+### <samp>02 — DOWNLOAD (FOR FRIENDS: NO SETUP NEEDED)</samp>
 
 Go to the [**Releases**](https://github.com/Deatron01/FreeTex/releases/latest) page and download the file for your system:
 
@@ -17,7 +26,7 @@ The desktop app has the whole editor and its own compile server built in. If [Te
 
 > Windows SmartScreen may warn about an unknown publisher because the app is not code-signed. Click **More info → Run anyway**.
 
-## Features
+### <samp>03 — FEATURES</samp>
 
 **Projects**
 - Project dashboard with search, sorting, rename, copy, trash/restore and permanent delete
@@ -58,7 +67,7 @@ The desktop app has the whole editor and its own compile server built in. If [Te
 - Resizable, collapsible panes: editor only, PDF only, or side by side. On phones one pane is shown at a time
 - Light/dark/system theme; English and Hungarian interface
 
-## Quick start
+### <samp>04 — QUICK START</samp>
 
 ```bash
 npm run setup     # install the web app's dependencies
@@ -67,7 +76,7 @@ npm run dev       # start the editor on http://localhost:5173
 
 This setup compiles with texlive.net, so you don't need to install LaTeX.
 
-### With the local compile server (recommended if you have TeX Live)
+#### With the local compile server (recommended if you have TeX Live)
 
 The compile server is in `server/`. It is a small Node.js program with no dependencies that runs `latexmk` on your own TeX Live installation.
 
@@ -84,7 +93,7 @@ npm start         # builds latex-web and serves everything on http://127.0.0.1:3
 
 When the server is running, FreeTex uses it automatically. You can change this in **Settings → Compiler**.
 
-### Desktop app
+#### Desktop app
 
 ```bash
 npm run desktop        # build the web app and start FreeTex in an Electron window
@@ -100,7 +109,7 @@ git push origin v1.0.0
 
 The workflow then creates a GitHub Release with the `.exe`, `.dmg` and `.AppImage` attached. Alternatively, open **Actions → Desktop app → Run workflow** on GitHub and enter a version such as `1.0.1`; the workflow creates the tag and the release for you.
 
-### Docker
+#### Docker
 
 ```bash
 docker build -t freetex .
@@ -109,7 +118,7 @@ docker run -p 3001:3001 freetex
 
 The image contains the full TeX Live distribution, so it is large (several GB).
 
-## Compile backends compared
+### <samp>05 — COMPILE BACKENDS COMPARED</samp>
 
 | | Local compile server | texlive.net |
 |---|---|---|
@@ -127,7 +136,7 @@ texlive.net accepts only flat text files. Before sending a project, FreeTex:
 
 You can also point FreeTex at any other server that runs [latexcgi](https://github.com/davidcarlisle/latexcgi), in **Settings → Compiler**.
 
-## Compile server configuration
+### <samp>06 — COMPILE SERVER CONFIGURATION</samp>
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -143,7 +152,7 @@ API: `GET /api/health`, `POST /api/compile`, `POST /api/texlivenet` (relay to te
 
 > **Security:** the server compiles whatever LaTeX it receives. It listens only on localhost by default and keeps shell escape off. If you expose it to other people, put it behind authentication and run it in a container (for example the Docker image, which runs as `nobody`).
 
-## Project layout
+### <samp>07 — PROJECT LAYOUT</samp>
 
 ```
 latex-web/            React + Vite + Tailwind front end
@@ -155,6 +164,12 @@ desktop/              Electron wrapper (main.cjs) that embeds the server; packag
 Dockerfile            web app + server + TeX Live in one image
 ```
 
-## Differences from Overleaf
+### <samp>08 — DIFFERENCES FROM OVERLEAF</samp>
 
 FreeTex is a single-user editor. Projects are stored in your browser, so there is no real-time collaboration, sharing, commenting or track changes. Use the `.zip` export (or a Git repository) to move or share projects.
+
+<br />
+
+<p align="center">
+  <sub><samp>MORE WORK AT <a href="https://github.com/Deatron01">GITHUB.COM/DEATRON01</a></samp></sub>
+</p>
